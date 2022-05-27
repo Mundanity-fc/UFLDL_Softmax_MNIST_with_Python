@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 def loadMNISTImages(dir: str):
     """
-    从目标文件中加载数据，模拟了Matlab中loadMNISTImages.m文件的功能。
+    从目标文件中加载数据，模拟了 Matlab 中 loadMNISTImages.m 文件的功能。
     
     :param dir: 目标文件 
     :return: 数据集
@@ -28,7 +28,7 @@ def loadMNISTImages(dir: str):
 
 def loadMNISTLabels(dir: str):
     """
-    从目标文件夹中加载标签，模拟了Matlab中loadMNISTLabels.m文件的功能。
+    从目标文件夹中加载标签，模拟了 Matlab 中 loadMNISTLabels.m 文件的功能。
 
     :param dir: 目标文件 
     :return: 标签集
@@ -43,7 +43,7 @@ def loadMNISTLabels(dir: str):
 
 def dataset_load(dir: str):
     """
-    从目标文件夹中加载数据集，模拟了Matlab中ex1_load_mnist.m文件的功能。包含对数据的加载、乱序、标准化过程。
+    从目标文件夹中加载数据集，模拟了 Matlab 中 ex1_load_mnist.m 文件的功能。包含对数据的加载、乱序、标准化过程。
     
     :param dir: 数据集所在文件夹 
     :return: 训练集与测试集的样本与标签
@@ -170,7 +170,7 @@ def get_softmax_gradient(theta: ndarray, train_x: ndarray, train_y: ndarray):
 
 def get_accuracy(theta: ndarray, x: ndarray, y: ndarray):
     """
-    对数据集进行准确度验证
+    对数据集进行准确度验证，模拟了 Matlab 中 multi_classifier_accuracy.m 文件的功能
 
     :param theta: θ，模型参数
     :param x: 数据集的样本
