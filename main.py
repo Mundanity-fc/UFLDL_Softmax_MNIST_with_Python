@@ -1,5 +1,7 @@
+import math
 import numpy as np
 from numpy import ndarray
+from scipy.optimize import minimize
 
 
 def loadMNISTImages(dir: str):
@@ -87,32 +89,138 @@ def dataset_load(dir: str):
     return train_x, train_y, test_x, test_y
 
 
-def get_hypothesis(theta, x):
-    return 0
-
-
-def softmax(theta: ndarray, train_x: ndarray, train_y: ndarray, class_num: int, feature_num: int, sample_num: int):
+def softmax(theta: ndarray, train_x: ndarray, train_y: ndarray):
     """
-    :param theta: 
+    对给定的 theta 值与训练集使用 softmax 计算损失函数与梯度值，模拟了 softmax_regression.m 中的功能
+    
+    :param theta: θ，模型参数
     :param train_x: 训练集样本
     :param train_y: 训练集标签
-    :return: 
+    :return: 损失函数值与梯度值
     """""
+    m = len(train_x[0, :])
+    n = len(train_x[:, 0])
 
-    print()
-    return ndarray
+    # 修正 theta 形状
+    theta = theta.reshape((n, -1), order='C')
+    num_class = len(theta[0, :]) + 1
+    f = 0
+    g = theta * 0
+
+    # h0 为计算 hypothesis [即h_θ(x)] 过程的中间变量
+    h0 = np.dot(theta.T, train_x)
+    zeros = np.zeros([1, m])
+    h0 = np.concatenate((h0, zeros), axis=0)
+    h0 = np.exp(h0)
+    sum = np.sum(h0, axis=0)
+    for i in range(0, m):
+        for j in range(0, num_class):
+            h0[j, i] = h0[j, i] / sum[i]
+    # 得到 h_θ(x)，为 10 x 60000 的向量，表示每一样本在进行了softmax函数处理后对于某一标签的概率
+    h_theta = h0
+
+    # 计算损失函数值 f
+    for i in range(0, m):
+        for j in range(0, num_class):
+            if train_y[i] == j + 1:
+                f = f + math.log(h_theta[j, i], 2)
+    f = f * -1
+
+    # 计算梯度 g
+    # g = - [X*(1(y==k)*P(y=k|x,theta))]
+    # 令(1(y==k)*P(y=k|x,theta)) = g_1 为，60000 * 10 的向量
+    g_1 = np.zeros([m, num_class])
+    for i in range(0, m):
+        for j in range(0, num_class):
+            if train_y[i] == j + 1:
+                g_1[i][j] = 1 - h_theta[j][i]
+            else:
+                g_1[i][j] = 0 - h_theta[j][i]
+    g = np.dot(train_x, g_1)
+    g = g[:, 0:9:1]
+    g = g * -1
+    return f, g
 
 
-if __name__ == '__main__':
+def get_softmax_loss(theta: ndarray, train_x: ndarray, train_y: ndarray):
+    """
+    用于 Scipy.optimize.minimize 的函数，只返回 softmax 的损失函数值
+    
+    :param theta: θ，模型参数
+    :param train_x: 训练集样本
+    :param train_y: 训练集标签
+    :return: 损失函数值
+    """""
+    f, g = softmax(theta, train_x, train_y)
+    return f
+
+
+def get_softmax_gradient(theta: ndarray, train_x: ndarray, train_y: ndarray):
+    """
+    用于 Scipy.optimize.minimize 的函数，只返回 softmax 的梯度值
+    
+    :param theta: θ，模型参数
+    :param train_x: 训练集样本
+    :param train_y: 训练集标签
+    :return: 梯度值
+    """""
+    f, g = softmax(theta, train_x, train_y)
+    return g.flatten()
+
+
+def get_accuracy(theta: ndarray, x: ndarray, y: ndarray):
+    """
+    对数据集进行准确度验证
+
+    :param theta: θ，模型参数
+    :param x: 数据集的样本
+    :param y: 数据集的标签
+    :return: 准确度 0~1
+    """""
+    correct = 0
+    result = np.dot(theta.T, x)
+    max = np.argmax(result, axis=0)
+    max = max + 1
+    for i in range(len(x[0, :])):
+        if max[i] == y[i]:
+            correct += 1
+    accuracy = correct / len(x[0, :])
+    return accuracy
+
+
+def main():
+    """
+    主函数
+    
+    """""
     train_x, train_y, test_x, test_y = dataset_load('./mnist_dataset')
-
+    zeros = np.zeros([1, len(train_x[0, :])])
+    train_x = np.concatenate((train_x, zeros), axis=0)
+    zeros = np.zeros([1, len(test_x[0, :])])
+    test_x = np.concatenate((test_x, zeros), axis=0)
     # 将标签从1开始
     train_y = train_y + 1
     test_y = test_y + 1
     class_num = 10
     feature_num = len(train_x[:, 0])
     sample_num = len(train_x[0, :])
+    # 随机初始化 theta
     theta = np.random.random((feature_num, class_num - 1))
-    theta_1 = theta[:, 0]
-    softmax(theta, train_x, train_y, class_num, feature_num, sample_num)
-    print(sample_num)
+    theta = theta * 0.001
+    # 设置优化器参数
+    opt = {'maxiter': 200, 'disp': True}
+    # 对函数 get_softmax_loss 进行优化，初始参数为 theta ，传递无关参数 train_x 与 train_y，应用 opt 中设置，使用 L-BFGS-B 方法（即 minFunc.m
+    # 中的默认方法），通过 get_softmax_gradient 获取梯度
+    result = minimize(fun=get_softmax_loss, x0=theta, args=(train_x, train_y), options=opt, method='L-BFGS-B',
+                      jac=get_softmax_gradient)
+    # 修正 theta 形状
+    theta = result.x.reshape((feature_num, -1), order='C')
+    zeros = np.zeros([feature_num, 1])
+    theta = np.concatenate((theta, zeros), axis=1)
+    # 进行验证
+    print("在训练集上验证的准确率为：" + str(get_accuracy(theta, train_x, train_y)))
+    print("在测试集上验证的准确率为：" + str(get_accuracy(theta, test_x, test_y)))
+
+
+if __name__ == '__main__':
+    main()
